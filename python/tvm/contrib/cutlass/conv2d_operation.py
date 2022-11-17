@@ -60,21 +60,15 @@ class Conv2dOperation:
 
         if self.tile_description.math_instruction.opcode_class == OpcodeClass.TensorOp:
             inst_shape = "%d%d%d" % tuple(self.tile_description.math_instruction.instruction_shape)
-            if (
-                self.tile_description.math_instruction.element_a != self.A.element
-                and self.tile_description.math_instruction.element_a != self.accumulator_type()
-            ):
+            if self.tile_description.math_instruction.element_a not in [
+                self.A.element,
+                self.accumulator_type(),
+            ]:
                 intermediate_type = DataTypeNames[self.tile_description.math_instruction.element_a]
         else:
             inst_shape = ""
 
-        return "%s%s%s%s_%s" % (
-            ShortDataTypeNames[self.accumulator_type()],
-            inst_shape,
-            intermediate_type,
-            ConvKindNames[self.conv_kind],
-            IteratorAlgorithmNames[self.iterator_algorithm],
-        )
+        return f"{ShortDataTypeNames[self.accumulator_type()]}{inst_shape}{intermediate_type}{ConvKindNames[self.conv_kind]}_{IteratorAlgorithmNames[self.iterator_algorithm]}"
 
     def extended_name(self):
         """ Append data types if they differ from compute type. """
@@ -103,7 +97,7 @@ class Conv2dOperation:
         return extended_name
 
     def layout_name(self):
-        return "%s" % (ShortLayoutTypeNames[self.A.layout])
+        return f"{ShortLayoutTypeNames[self.A.layout]}"
 
     def procedural_name(self):
         """
@@ -336,14 +330,13 @@ using ReductionStrideIndex = typename ReductionDevice::StrideIndex;
             template = substitute_template(
                 gemm_template, {"epilogue": self.epilogue_residual_block}
             )
-            values.update(
-                {
-                    "unary_op": residual_block_info["unary_op"],
-                    "binary_op": residual_block_info["binary_op"],
-                    "activation": residual_block_info["activation"],
-                    "conv_kernel_postfix": "WithBroadcast",
-                }
-            )
+            values |= {
+                "unary_op": residual_block_info["unary_op"],
+                "binary_op": residual_block_info["binary_op"],
+                "activation": residual_block_info["activation"],
+                "conv_kernel_postfix": "WithBroadcast",
+            }
+
         elif no_beta_scaling:
             template = substitute_template(
                 gemm_template, {"epilogue": self.epilogue_no_beta_scaling}

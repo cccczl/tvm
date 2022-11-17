@@ -250,7 +250,7 @@ def drive_tune(args):
     )
 
     if args.rpc_tracker:
-        parsed_url = urlparse("//%s" % args.rpc_tracker)
+        parsed_url = urlparse(f"//{args.rpc_tracker}")
         rpc_hostname = parsed_url.hostname
         rpc_port = parsed_url.port or 9090
         logger.info("RPC tracker hostname: %s", rpc_hostname)
@@ -430,11 +430,7 @@ def tune_model(
         )
 
         # For autoscheduling on some devices, we need to maintain a LocalRPCMeasureContext object.
-        if enable_autoscheduler:
-            runner = local_server.runner
-        else:
-            runner = local_server
-
+        runner = local_server.runner if enable_autoscheduler else local_server
     if enable_autoscheduler:
 
         tasks, weights = autoscheduler_get_tuning_tasks(
@@ -521,13 +517,11 @@ def autotvm_get_tuning_tasks(
     if alter_layout:
         mod = convert_graph_layout(mod, alter_layout)
 
-    tasks = autotvm.task.extract_from_program(
+    return autotvm.task.extract_from_program(
         mod["main"],
         target=target,
         params=params,
     )
-
-    return tasks
 
 
 def autoscheduler_get_tuning_tasks(
@@ -605,13 +599,16 @@ def schedule_tasks(
     log_estimated_latency : bool, optional
         If true, writes the estimated runtime of the model during each step of tuning to file.
     """
-    if not log_estimated_latency:
-        callbacks = [auto_scheduler.task_scheduler.PrintTableInfo()]
-    else:
-        callbacks = [
+    callbacks = (
+        [
             auto_scheduler.task_scheduler.PrintTableInfo(),
-            auto_scheduler.task_scheduler.LogEstimatedLatency(("total_latency.tsv")),
+            auto_scheduler.task_scheduler.LogEstimatedLatency(
+                ("total_latency.tsv")
+            ),
         ]
+        if log_estimated_latency
+        else [auto_scheduler.task_scheduler.PrintTableInfo()]
+    )
 
     # Create the scheduler
     tuner = auto_scheduler.TaskScheduler(
@@ -663,7 +660,7 @@ def tune_tasks(
         prefix = "[Task %2d/%2d] " % (i + 1, len(tasks))
 
         # Create a tuner
-        if tuner in ("xgb", "xgb-rank"):
+        if tuner in {"xgb", "xgb-rank"}:
             tuner_obj = XGBTuner(tsk, loss_type="rank")
         elif tuner == "xgb_knob":
             tuner_obj = XGBTuner(tsk, loss_type="rank", feature_type="knob")
@@ -674,7 +671,7 @@ def tune_tasks(
         elif tuner == "gridsearch":
             tuner_obj = GridSearchTuner(tsk)
         else:
-            raise TVMCException("invalid tuner: %s " % tuner)
+            raise TVMCException(f"invalid tuner: {tuner} ")
 
         # If transfer learning is being used, load the existing results
         if tuning_records and os.path.exists(tuning_records):

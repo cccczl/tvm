@@ -91,19 +91,21 @@ def link_shared(so_name, objs, **kwargs):
         print("  Object files:", objs)
     if not os.access(linker, os.X_OK):
         message = 'The linker "' + linker + '" does not exist or is not executable.'
-        if not os.environ.get("HEXAGON_TOOLCHAIN"):
-            message += (
-                " The environment variable HEXAGON_TOOLCHAIN is unset. Please export "
-                + "HEXAGON_TOOLCHAIN in your environment, so that ${HEXAGON_TOOLCHAIN}/bin/"
-                + "hexagon-link exists."
-            )
-        else:
-            message += (
+        message += (
+            (
                 " Please verify the value of the HEXAGON_LINKER environment variable "
                 + '(currently set to "'
                 + hexagon_toolchain_root
                 + '").'
             )
+            if os.environ.get("HEXAGON_TOOLCHAIN")
+            else (
+                " The environment variable HEXAGON_TOOLCHAIN is unset. Please export "
+                + "HEXAGON_TOOLCHAIN in your environment, so that ${HEXAGON_TOOLCHAIN}/bin/"
+                + "hexagon-link exists."
+            )
+        )
+
         raise Exception(message)
 
     libpath = os.path.join(hexagon_toolchain_root, "target", "hexagon", "lib", "v66", "G0")
@@ -139,7 +141,7 @@ def mem_info_vtcm():
     )
 
 
-def lower_vtcm_(get_alloc, get_free, def_align, func, mod, ctx):  # pylint: disable=unused-argument
+def lower_vtcm_(get_alloc, get_free, def_align, func, mod, ctx):    # pylint: disable=unused-argument
 
     """Generic VTCM allocation
 
@@ -177,7 +179,7 @@ def lower_vtcm_(get_alloc, get_free, def_align, func, mod, ctx):  # pylint: disa
         """Collect information about VTCM buffers and their alignments."""
         if isinstance(stmt, tvm.tir.AttrStmt):
             if stmt.attr_key == "storage_alignment":
-                if not stmt.node in alignments:
+                if stmt.node not in alignments:
                     alignments[stmt.node] = []
                 alignments[stmt.node].append(stmt.value)
         elif isinstance(stmt, tvm.tir.Allocate):
@@ -210,7 +212,7 @@ def lower_vtcm_(get_alloc, get_free, def_align, func, mod, ctx):  # pylint: disa
                     stmt.buffer_var, get_alloc(stmt, buf_align(var)), body_w_check
                 )
             return stmt
-        raise ValueError("Wrong argument type (" + type(stmt) + ") to 'mutate'")
+        raise ValueError(f"Wrong argument type ({type(stmt)}" + ") to 'mutate'")
 
     f = func.with_body(
         tvm.tir.stmt_functor.ir_transform(

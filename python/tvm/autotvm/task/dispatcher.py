@@ -243,14 +243,13 @@ class ApplyHistoryBest(DispatchContext):
 
             # use model as key to build best map
             key = (inp.target.model, inp.task.workload)
-            if key not in best_by_model:
-                if inp.target.model != "unknown":
-                    best_by_model[key] = (inp, res)
-            else:
+            if key in best_by_model:
                 _, other_res = best_by_model[key]
                 if np.mean(other_res.costs) > np.mean(res.costs):
                     best_by_model[key] = (inp, res)
 
+            elif inp.target.model != "unknown":
+                best_by_model[key] = (inp, res)
         logger.debug("Finish loading %d records", counter)
 
     def _query_inside(self, target, workload):

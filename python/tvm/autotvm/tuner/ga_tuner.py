@@ -125,17 +125,16 @@ class GATuner(Tuner):
                     if np.random.random() < self.mutation_prob:
                         tmp_gene[j] = np.random.randint(dim)
 
-                if len(self.visited) < len(self.space):
-                    while knob2point(tmp_gene, self.dims) in self.visited:
-                        j = np.random.randint(len(self.dims))
-                        tmp_gene[j] = np.random.randint(
-                            self.dims[j]  # pylint: disable=invalid-sequence-index
-                        )
-                    next_genes.append(tmp_gene)
-                    self.visited.add(knob2point(tmp_gene, self.dims))
-                else:
+                if len(self.visited) >= len(self.space):
                     break
 
+                while knob2point(tmp_gene, self.dims) in self.visited:
+                    j = np.random.randint(len(self.dims))
+                    tmp_gene[j] = np.random.randint(
+                        self.dims[j]  # pylint: disable=invalid-sequence-index
+                    )
+                next_genes.append(tmp_gene)
+                self.visited.add(knob2point(tmp_gene, self.dims))
             self.genes = next_genes
             self.trial_pt = 0
             self.scores = []

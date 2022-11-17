@@ -39,7 +39,7 @@ def find_example_resource():
                 resource_files.append(full_name)
     for fname in [index_page] + resource_files:
         if not os.path.exists(fname):
-            raise RuntimeError("Cannot find %s" % fname)
+            raise RuntimeError(f"Cannot find {fname}")
     return index_page, resource_files
 
 

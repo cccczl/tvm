@@ -40,12 +40,11 @@ class _Shape:
     """Helper class for dealing with Tensor shapes of different layouts"""
 
     def __init__(self, shape: List[int], layout="NHWC"):
+        self.height = int(shape[1])
         if layout == "NHCWB16":
-            self.height = int(shape[1])
             self.width = int(shape[3])
             self.depth = int(shape[2]) * int(shape[4])
         else:
-            self.height = int(shape[1])
             self.width = int(shape[2])
             self.depth = int(shape[3])
 
@@ -154,22 +153,26 @@ class EthosuDeviceConfig:
         bw_limit = 0
         if op_type == "ethosu_pooling" and op_str == "MAX":
             cycles = self._output_cycles[0]
-        elif op_type in ("ethosu_pooling", "ethosu_conv2d", "ethosu_depthwise_conv2d"):
+        elif op_type in {
+            "ethosu_pooling",
+            "ethosu_conv2d",
+            "ethosu_depthwise_conv2d",
+        }:
             cycles = self._output_cycles[1] if ifm_dtype == "int8" else self._output_cycles[2]
         elif op_type == "ethosu_binary_elementwise":
             # Binary Bandwidth Limitations
-            if ifm_dtype == "int8":
-                bw_limit = 0.125 if ofm_dtype == "int8" else 0.75
-            elif ifm_dtype == "int16":
+            if ifm_dtype == "int16":
                 bw_limit = 0.75 if ofm_dtype == "int16" else 1
+            elif ifm_dtype == "int8":
+                bw_limit = 0.125 if ofm_dtype == "int8" else 0.75
             else:
                 bw_limit = 1.5
 
-            if op_str in ("MIN", "MAX"):
+            if op_str in {"MIN", "MAX"}:
                 cycles = self._output_cycles[1]
             elif op_str == "MUL":
                 cycles = self._output_cycles[2]
-            if op_str in ("ADD", "SUB"):
+            if op_str in {"ADD", "SUB"}:
                 if ofm_dtype == "int32":
                     cycles = (
                         self._output_cycles[2] if ifm_dtype == "int32" else self._output_cycles[3]
@@ -186,9 +189,9 @@ class EthosuDeviceConfig:
 
             if op_str == "CLZ":
                 cycles = self._output_cycles[1]
-            elif op_str in ("SHL", "SHR"):
+            elif op_str in {"SHL", "SHR"}:
                 cycles = self._output_cycles[2]
-            elif op_str in ("LRELU", "ABS"):
+            elif op_str in {"LRELU", "ABS"}:
                 cycles = self._output_cycles[1]
                 if ifm_dtype == "int16":
                     bw_limit = 0.5
@@ -196,7 +199,7 @@ class EthosuDeviceConfig:
         act_cycles = 0
         if activation == "CLIP":
             act_cycles = self._activation_cycles[0]
-        elif activation in ("LUT", "TANH", "SIGMOID"):
+        elif activation in {"LUT", "TANH", "SIGMOID"}:
             act_cycles = self._activation_cycles[1]
 
         return max((cycles / self._output_units), act_cycles, bw_limit)
@@ -220,12 +223,8 @@ class EthosuDeviceConfig:
         int
             The amount of delay cycles
         """
-        if op_type in ("ethosu_conv2d", "ethosu_depthwise2d", "ethosu_pooling"):
-            if ifm_dtype == "int16":
-                return self._delay_cycles[1]
-
-            return self._delay_cycles[0]
-
+        if op_type in {"ethosu_conv2d", "ethosu_depthwise2d", "ethosu_pooling"}:
+            return self._delay_cycles[1] if ifm_dtype == "int16" else self._delay_cycles[0]
         return 0
 
     def _get_weight_decoder_cycles(self, op_type: str) -> int:
@@ -242,7 +241,7 @@ class EthosuDeviceConfig:
         int
             Estimated cycles for weight decoding
         """
-        if op_type in ("ethosu_conv2d", "ethosu_depthwise2d"):
+        if op_type in {"ethosu_conv2d", "ethosu_depthwise2d"}:
             return 32 * self._micro_block.depth // 8
 
         return 0
@@ -309,13 +308,15 @@ class EthosuDeviceConfig:
         )
 
         if op_type == "ethosu_conv2d":
-            if dtype == "int8":
-                if is_partkernel:
-                    depth = self._align(min(32, input_shape.depth), 8)
-                else:
-                    depth = self._align(min(16, input_shape.depth), 8)
-            elif dtype == "int16":
+            if dtype == "int16":
                 depth = self._align(min(16, input_shape.depth), 4)
+            elif dtype == "int8":
+                depth = (
+                    self._align(min(32, input_shape.depth), 8)
+                    if is_partkernel
+                    else self._align(min(16, input_shape.depth), 8)
+                )
+
             else:
                 depth = self._align(min(8, input_shape.depth), 2)
         else:
@@ -394,16 +395,11 @@ class EthosuDeviceConfig:
 
         subkernels = []
         for y in subkernels_y:
-            for x in subkernels_x:
-                subkernels.append((y, x))
-
+            subkernels.extend((y, x) for x in subkernels_x)
         return subkernels
 
     def _get_accumulator_width(self, op_type: str, ifm_dtype: str):
-        if ifm_dtype == "int16" and op_type != "ethosu_pooling":
-            return 5
-
-        return 4
+        return 5 if ifm_dtype == "int16" and op_type != "ethosu_pooling" else 4
 
     def is_partkernel(
         self, op_type: str, ifm_channels: int, ifm_dtype: str, kernel_elements: int
@@ -493,7 +489,7 @@ class EthosuDeviceConfig:
 
         # Split the block in half until it fits into SHRAM
         if output_layout == "NHCWB16":
-            split_order = (a for a in [1, 3, 2])
+            split_order = iter([1, 3, 2])
             output_block = [
                 output_shape[0],
                 min(output_shape[1], self._max_block_shape.height),
@@ -502,7 +498,7 @@ class EthosuDeviceConfig:
                 16,
             ]
         else:
-            split_order = (a for a in [1, 2, 3])
+            split_order = iter([1, 2, 3])
             output_block = [
                 output_shape[0],
                 min(output_shape[1], self._max_block_shape.height),
@@ -622,17 +618,14 @@ class EthosuDeviceConfig:
         else:
             output_shape = _Shape(ofm_shape)
 
+        subkernel_transform[1][-1] = min(
+            subkernel_transform[1][-1], self._subkernel_limits[0] - stride_h
+        )
         if input_layout == "NHCWB16":
-            subkernel_transform[1][-1] = min(
-                subkernel_transform[1][-1], self._subkernel_limits[0] - stride_h
-            )
             subkernel_transform[3][-1] = min(
                 subkernel_transform[3][-1], self._subkernel_limits[1] - stride_w
             )
         else:
-            subkernel_transform[1][-1] = min(
-                subkernel_transform[1][-1], self._subkernel_limits[0] - stride_h
-            )
             subkernel_transform[2][-1] = min(
                 subkernel_transform[2][-1], self._subkernel_limits[1] - stride_w
             )
@@ -723,29 +716,28 @@ class EthosuDeviceConfig:
                     acc_banks = _round_up_div(acc_bytes, self._bank_size_bytes) * 2
                     acc_banks = _round_up(acc_banks, self._accumulator_granularity[acc_bytewidth])
 
-                    if (input_banks + acc_banks) <= banks_available:
-                        output_cycles = self._get_output_cycles(
-                            op_type, op_str, ifm_dtype, ofm_dtype, activation
-                        )
-                        output_cycles *= reduce(lambda a, b: a * b, output_block, 1)
-                        output_cycles = int(math.ceil(output_cycles))
-                        compute_cycles = self._estimate_compute_cycles_per_block(
-                            op_type,
-                            output_block_shape,
-                            input_block_shape,
-                            kernel_h,
-                            kernel_w,
-                            ifm_channels,
-                            is_partkernel,
-                        )
-                        valid_block_configs.append(
-                            BlockConfig(output_block, compute_cycles, output_cycles)
-                        )
-                    else:
+                    if input_banks + acc_banks > banks_available:
                         # Block config does not fit into SHRAM
                         # Any Block config that is strictly larger than this one will also fail
                         break
 
+                    output_cycles = self._get_output_cycles(
+                        op_type, op_str, ifm_dtype, ofm_dtype, activation
+                    )
+                    output_cycles *= reduce(lambda a, b: a * b, output_block, 1)
+                    output_cycles = int(math.ceil(output_cycles))
+                    compute_cycles = self._estimate_compute_cycles_per_block(
+                        op_type,
+                        output_block_shape,
+                        input_block_shape,
+                        kernel_h,
+                        kernel_w,
+                        ifm_channels,
+                        is_partkernel,
+                    )
+                    valid_block_configs.append(
+                        BlockConfig(output_block, compute_cycles, output_cycles)
+                    )
         return valid_block_configs
 
     def _estimate_compute_cycles_per_block(

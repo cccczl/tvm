@@ -57,13 +57,13 @@ def get_project_options(project_info):
     options = project_info["project_options"]
 
     options_by_method = defaultdict(list)
+    # Get list of methods associated with an option based on the
+    # existance of a 'required' or 'optional' lists. API specification
+    # guarantees at least one of these lists will exist. If a list does
+    # not exist it's returned as None by the API.
+    metadata = ["required", "optional"]
     for opt in options:
-        # Get list of methods associated with an option based on the
-        # existance of a 'required' or 'optional' lists. API specification
-        # guarantees at least one of these lists will exist. If a list does
-        # not exist it's returned as None by the API.
-        metadata = ["required", "optional"]
-        option_methods = [(opt[md], bool(md == "required")) for md in metadata if opt[md]]
+        option_methods = [(opt[md], md == "required") for md in metadata if opt[md]]
         for methods, is_opt_required in option_methods:
             for method in methods:
                 name = opt["name"]
@@ -82,11 +82,7 @@ def get_project_options(project_info):
 
                 help_text = opt["help"][0].lower() + opt["help"][1:]
 
-                if opt["default"]:
-                    default_text = f"Defaults to '{opt['default']}'."
-                else:
-                    default_text = None
-
+                default_text = f"Defaults to '{opt['default']}'." if opt["default"] else None
                 formatted_help_text = format_option(
                     option_choices_text, help_text, default_text, is_opt_required
                 )
@@ -183,12 +179,14 @@ def check_options_choices(options, valid_options):
     }
 
     for option in options:
-        if option in valid_options_choices:
-            if options[option] not in valid_options_choices[option]:
-                raise TVMCException(
-                    f"Choice '{options[option]}' for option '{option}' is invalid. "
-                    "Use --list-options to see all available choices for that option."
-                )
+        if (
+            option in valid_options_choices
+            and options[option] not in valid_options_choices[option]
+        ):
+            raise TVMCException(
+                f"Choice '{options[option]}' for option '{option}' is invalid. "
+                "Use --list-options to see all available choices for that option."
+            )
 
 
 def get_and_check_options(passed_options, valid_options):
@@ -228,6 +226,8 @@ def get_and_check_options(passed_options, valid_options):
 
 def get_project_dir(project_dir: Union[pathlib.Path, str]) -> str:
     """Get project directory path"""
-    if not os.path.isabs(project_dir):
-        return os.path.abspath(project_dir)
-    return project_dir
+    return (
+        project_dir
+        if os.path.isabs(project_dir)
+        else os.path.abspath(project_dir)
+    )

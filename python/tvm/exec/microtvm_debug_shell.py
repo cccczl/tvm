@@ -83,7 +83,7 @@ def handle_conn(conn, rpc_key):
     key = py_str(base.recvall(conn, keylen))
     arr = key.split()
     expect_header = "client:"
-    server_key = "server:" + rpc_key
+    server_key = f"server:{rpc_key}"
     if arr[0] != expect_header:
         conn.sendall(struct.pack("<i", base.RPC_CODE_MISMATCH))
         _LOG.warning("mismatch key from %s", addr)
@@ -124,9 +124,7 @@ def main():
     args = parse_args()
     logging.basicConfig(level=logging.INFO)
     if args.impl:
-        package = None
-        if "." not in args.impl:
-            package = f"tvm.micro.contrib.{args.impl}"
+        package = f"tvm.micro.contrib.{args.impl}" if "." not in args.impl else None
         importlib.import_module(args.impl, package)
 
     sock = socket.socket(base.get_addr_family([args.host, args.port]), socket.SOCK_STREAM)

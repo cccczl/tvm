@@ -67,7 +67,7 @@ def extract(path):
         tar.extractall(path=dir_path)
         tar.close()
     else:
-        raise RuntimeError("Could not decompress the file: " + path)
+        raise RuntimeError(f"Could not decompress the file: {path}")
 
 
 ######################################################################
@@ -189,4 +189,6 @@ predictions = np.squeeze(tvm_output)
 prediction = np.argmax(predictions)
 
 # Convert id to class name and show the result
-print("The image prediction result is: id " + str(prediction) + " name: " + labels[prediction])
+print(
+    f"The image prediction result is: id {str(prediction)} name: {labels[prediction]}"
+)

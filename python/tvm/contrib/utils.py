@@ -101,13 +101,12 @@ class TempDirectory(object):
         if custom_path:
             os.mkdir(custom_path)
             self.temp_dir = custom_path
+        elif self._created_with_keep_for_debug:
+            parent_dir = self._get_debug_parent_dir()
+            self.temp_dir = f"{parent_dir}/{self._increment_num_tempdir_created():05d}"
+            os.mkdir(self.temp_dir)
         else:
-            if self._created_with_keep_for_debug:
-                parent_dir = self._get_debug_parent_dir()
-                self.temp_dir = f"{parent_dir}/{self._increment_num_tempdir_created():05d}"
-                os.mkdir(self.temp_dir)
-            else:
-                self.temp_dir = tempfile.mkdtemp()
+            self.temp_dir = tempfile.mkdtemp()
 
         if not self._created_with_keep_for_debug:
             self.TEMPDIRS.add(self.temp_dir)

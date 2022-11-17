@@ -54,7 +54,7 @@ def find_lld(required=True):
     valid_list = [utils.which(x) for x in lld_list]
     valid_list = [x for x in valid_list if x]
     if not valid_list and required:
-        raise RuntimeError("cannot find ld.lld, candidates are: " + str(lld_list))
+        raise RuntimeError(f"cannot find ld.lld, candidates are: {lld_list}")
     return valid_list
 
 
@@ -116,8 +116,7 @@ def callback_rocm_link(obj_bin):
     with open(tmp_obj, "wb") as out_file:
         out_file.write(bytes(obj_bin))
     rocm_link(tmp_obj, tmp_cobj)
-    cobj_bin = bytearray(open(tmp_cobj, "rb").read())
-    return cobj_bin
+    return bytearray(open(tmp_cobj, "rb").read())
 
 
 @tvm._ffi.register_func("tvm_callback_rocm_bitcode_path")
@@ -159,12 +158,12 @@ def callback_rocm_bitcode_path(rocdl_dir=None):
 
     bitcode_files = []
     for n in bitcode_names:
-        p = join(rocdl_dir, n + ".bc")  # rocm >= 3.9
+        p = join(rocdl_dir, f"{n}.bc")
         if not exists(p):  # rocm <= 3.8
-            p = join(rocdl_dir, n + ".amdgcn.bc")
+            p = join(rocdl_dir, f"{n}.amdgcn.bc")
         if exists(p):
             bitcode_files.append(p)
         elif "isa_version" not in n and n not in {"irif"}:
-            raise RuntimeError("could not find bitcode " + n)
+            raise RuntimeError(f"could not find bitcode {n}")
 
     return tvm.runtime.convert(bitcode_files)

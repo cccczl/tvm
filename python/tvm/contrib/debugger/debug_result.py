@@ -76,11 +76,13 @@ class DebugResult(object):
         nodes_len = len(self._nodes_list)
         for i in range(nodes_len):
             node = self._nodes_list[i]
-            input_list = []
-            for input_node in node["inputs"]:
-                input_list.append(self._nodes_list[input_node[0]]["name"])
+            input_list = [
+                self._nodes_list[input_node[0]]["name"]
+                for input_node in node["inputs"]
+            ]
+
             node["inputs"] = input_list
-            dtype = str("type: " + self._dtype_list[1][i])
+            dtype = str(f"type: {self._dtype_list[1][i]}")
             if "attrs" not in node:
                 node["attrs"] = {}
                 node["op"] = "param"
@@ -212,9 +214,9 @@ class DebugResult(object):
         total_time = sum(time[0] for time in self._time_list)
         for node, time in zip(self._nodes_list, self._time_list):
             num_outputs = self.get_graph_node_output_num(node)
-            for j in range(num_outputs):
+            for _ in range(num_outputs):
                 op = node["op"]
-                if node["op"] == "param":
+                if op == "param":
                     eid += 1
                     continue
                 name = node["name"]
@@ -244,8 +246,7 @@ class DebugResult(object):
             fmt = fmt + "{:<" + str(max_len + 2) + "}"
         log = [fmt.format(*header)]
         log.append(fmt.format(*lines))
-        for row in data:
-            log.append(fmt.format(*row))
+        log.extend(fmt.format(*row) for row in data)
         return "\n".join(log)
 
     def display_debug_result(self, sort_by_time=True):

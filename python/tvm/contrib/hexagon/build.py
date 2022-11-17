@@ -112,13 +112,10 @@ class HexagonLauncher:
         while self._get_workspace_size() > self._workspace_max_size_mb:
             self._workspace_remove_latest()
 
-        if not workspace_dir:
-            self._workspace = str(
-                ANDROID_HEXAGON_TEST_BASE_DIR
-                / datetime.datetime.now().strftime("%Y-%m-%dT%H-%M-%S")
-            )
-        else:
-            self._workspace = workspace_dir
+        self._workspace = workspace_dir or str(
+            ANDROID_HEXAGON_TEST_BASE_DIR
+            / datetime.datetime.now().strftime("%Y-%m-%dT%H-%M-%S")
+        )
 
         # Upload RPC server and libraries
         subprocess.check_call(self._adb_device_sub_cmd + ["shell", "mkdir", "-p", self._workspace])
@@ -129,9 +126,9 @@ class HexagonLauncher:
             if os.path.exists(android_bash_script_path):
                 os.remove(android_bash_script_path)
             with open(android_bash_script_path, "w") as dest_f:
-                for line in src_f.readlines():
+                for line in src_f:
                     if "<RPC_TRACKER_HOST>" in line:
-                        line = line.replace("<RPC_TRACKER_HOST>", str(rpc_tracker_host))
+                        line = line.replace("<RPC_TRACKER_HOST>", rpc_tracker_host)
                     if "<RPC_TRACKER_PORT>" in line:
                         line = line.replace("<RPC_TRACKER_PORT>", str(rpc_tracker_port))
                     if "<HEXAGON_REMOTE_DEVICE_KEY>" in line:
@@ -162,7 +159,7 @@ class HexagonLauncher:
             + ["reverse", f"tcp:{rpc_tracker_port}", f"tcp:{rpc_tracker_port}"]
         )
         # Enable port forward for RPC server. We forward 9 ports after the rpc_server_port.
-        for i in range(0, 10):
+        for i in range(10):
             subprocess.check_call(
                 self._adb_device_sub_cmd
                 + ["forward", f"tcp:{rpc_server_port+i}", f"tcp:{rpc_server_port+i}"]

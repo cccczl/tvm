@@ -88,11 +88,11 @@ class TensorFunc:
     def _load_platform_specific_library(self, lib_name):
         system = platform.system()
         if system == "Darwin":
-            lib_file_name = lib_name + ".dylib"
+            lib_file_name = f"{lib_name}.dylib"
         elif system == "Windows":
-            lib_file_name = lib_name + ".dll"
+            lib_file_name = f"{lib_name}.dll"
         else:
-            lib_file_name = lib_name + ".so"
+            lib_file_name = f"{lib_name}.so"
         return load_library.load_op_library(lib_file_name)
 
     def _is_static_shape(self, shape):

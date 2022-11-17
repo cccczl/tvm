@@ -235,10 +235,7 @@ class ModelBasedTuner(Tuner):
         ret = []
 
         counter = 0
-        while counter < batch_size:
-            if len(self.visited) >= len(self.space):
-                break
-
+        while counter < batch_size and len(self.visited) < len(self.space):
             while self.trial_pt < len(self.trials):
                 index = self.trials[self.trial_pt]
                 if index not in self.visited:
@@ -261,13 +258,12 @@ class ModelBasedTuner(Tuner):
     def update(self, inputs, results):
         for inp, res in zip(inputs, results):
             index = inp.config.index
+            self.xs.append(index)
             if res.error_no == 0:
-                self.xs.append(index)
                 flops = inp.task.flop / np.mean(res.costs)
                 self.flops_max = max(self.flops_max, flops)
                 self.ys.append(flops)
             else:
-                self.xs.append(index)
                 self.ys.append(0.0)
             # Usually the update function is called during the tune loop
             # after the index is already added to the visited set.
@@ -333,10 +329,7 @@ def point2knob(p, dims):
 
 def knob2point(knob, dims):
     """convert knob form (vector) to point form (single integer)"""
-    p = 0
-    for j, k in enumerate(knob):
-        p += int(np.prod(dims[:j])) * k
-    return p
+    return sum(int(np.prod(dims[:j])) * k for j, k in enumerate(knob))
 
 
 def submodular_pick(scores, knobs, n_pick, knob_weight=1.0):

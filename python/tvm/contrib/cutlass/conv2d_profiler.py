@@ -205,11 +205,10 @@ int main(int argc, char const **args) {
         )
 
     def emit(self, op_def, op_name, element_output, split_k_slices=1):
-        src = self.template.render(
+        return self.template.render(
             OperatorDef=op_def,
             OperatorName=op_name,
             ElementOutput=DataTypeTag[element_output],
             SplitK=split_k_slices,
             Reduction=self.reduction if split_k_slices > 1 else "",
         )
-        return src

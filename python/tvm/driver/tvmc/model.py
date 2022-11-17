@@ -94,7 +94,7 @@ class TVMCModel(object):
             self.load(model_path)
         else:
             self.mod = mod
-            self.params = params if params else {}
+            self.params = params or {}
 
     def save(self, model_path: str):
         """Save the TVMCModel to disk.
@@ -210,7 +210,7 @@ class TVMCModel(object):
         package_path : str
             The path that the package was saved to.
         """
-        lib_name = "mod." + lib_format
+        lib_name = f"mod.{lib_format}"
         graph_name = "mod.json"
         param_name = "mod.params"
 
@@ -221,15 +221,14 @@ class TVMCModel(object):
 
         if not cross:
             executor_factory.get_lib().export_library(path_lib)
+        elif cross_options:
+            executor_factory.get_lib().export_library(
+                path_lib, tvm.contrib.cc.cross_compiler(cross, options=cross_options.split(" "))
+            )
         else:
-            if not cross_options:
-                executor_factory.get_lib().export_library(
-                    path_lib, tvm.contrib.cc.cross_compiler(cross)
-                )
-            else:
-                executor_factory.get_lib().export_library(
-                    path_lib, tvm.contrib.cc.cross_compiler(cross, options=cross_options.split(" "))
-                )
+            executor_factory.get_lib().export_library(
+                path_lib, tvm.contrib.cc.cross_compiler(cross)
+            )
         self.lib_path = path_lib
 
         with open(temp.relpath(graph_name), "w") as graph_file:
@@ -281,7 +280,7 @@ class TVMCModel(object):
         if output_format == "mlf" and cross:
             raise TVMCException("Specifying the MLF output and a cross compiler is not supported.")
 
-        if output_format in ["so", "tar"]:
+        if output_format in {"so", "tar"}:
             package_path = self.export_classic_format(
                 executor_factory, package_path, cross, cross_options, output_format
             )
@@ -369,11 +368,7 @@ class TVMCPackage(object):
         with open(params, "rb") as param_file:
             self.params = bytearray(param_file.read())
 
-        if graph is not None:
-            with open(graph) as graph_file:
-                self.graph = graph_file.read()
-        else:
-            self.graph = None
+        self.graph = Path(graph).read_text() if graph is not None else None
 
 
 class TVMCResult(object):

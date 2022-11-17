@@ -21,7 +21,10 @@ from tvm._ffi import get_global_func
 
 
 def maybe_warn(target, func_name):
-    if get_global_func(func_name, allow_missing=True) and not "thrust" in target.libs:
+    if (
+        get_global_func(func_name, allow_missing=True)
+        and "thrust" not in target.libs
+    ):
         logging.warning("TVM is built with thrust but thrust is not used.")
     if "thrust" in target.libs and get_global_func(func_name, allow_missing=True) is None:
         logging.warning("thrust is requested but TVM is not built with thrust.")

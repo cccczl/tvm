@@ -65,8 +65,8 @@ def compile_vhls(kernel_info, device_name):
         funcname = funcname.value
         code = code.value
 
-        tmp_cpp = tmp_dir.relpath(funcname + ".cpp")
-        tmp_xo = tmp_dir.relpath(funcname + ".xo")
+        tmp_cpp = tmp_dir.relpath(f"{funcname}.cpp")
+        tmp_xo = tmp_dir.relpath(f"{funcname}.xo")
 
         with open(tmp_cpp, "wb") as out_file:
             out_file.write(bytes(code))

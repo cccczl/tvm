@@ -264,13 +264,20 @@ class CutlassConv2DProfiler:
             out_dtype,
             data_dtype,
             weight_dtype,
-            partial(enumerate_conv2d_operators, conv_kind, stride_support, split_k_slices),
-            lambda align: all([dim % align == 0 for dim in [IC, OC]]),
+            partial(
+                enumerate_conv2d_operators,
+                conv_kind,
+                stride_support,
+                split_k_slices,
+            ),
+            lambda align: all(dim % align == 0 for dim in [IC, OC]),
             use_3xtf32,
             profile_all_alignments,
-            # Use fp32 accumulation for wgrad to align with cuDNN
-            accumlator_dtype="float32" if conv_kind == ConvKind.Wgrad else out_dtype,
+            accumlator_dtype="float32"
+            if conv_kind == ConvKind.Wgrad
+            else out_dtype,
         )
+
 
         if not find_first_valid:
             self.engine.compile_all(ops, use_multiprocessing)

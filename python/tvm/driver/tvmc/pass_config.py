@@ -53,7 +53,7 @@ def get_pass_config_value(name, value, config_type):
             parsed_value = int(value)
         else:
             # if not an int, accept only values on the mapping table, case insensitive
-            parsed_value = mapping_values.get(value.lower(), None)
+            parsed_value = mapping_values.get(value.lower())
 
         if parsed_value is None:
             raise TVMCException(f"Invalid value '{value}' for configuration '{name}'. ")

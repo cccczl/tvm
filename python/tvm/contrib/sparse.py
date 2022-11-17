@@ -73,13 +73,12 @@ class CSRNDArray(object):
         assert self.shape is not None
         assert isinstance(self.data, _nd.NDArray)
         assert isinstance(self.indices, _nd.NDArray)
-        assert str(self.indices.dtype) == "int32" or str(self.indices.dtype) == "int64", str(
+        assert str(self.indices.dtype) in {"int32", "int64"}, str(
             self.indices.dtype
         )
+
         assert isinstance(self.indptr, _nd.NDArray)
-        assert str(self.indptr.dtype) == "int32" or str(self.indptr.dtype) == "int64", str(
-            self.indptr.dtype
-        )
+        assert str(self.indptr.dtype) in {"int32", "int64"}, str(self.indptr.dtype)
 
     def asnumpy(self):
         """Construct a full matrix and convert it to numpy array. This API will be deprecated
@@ -106,7 +105,7 @@ def array(source_array, device=None, shape=None, stype="csr"):
     if stype == "csr":
         ret = CSRNDArray(source_array, shape=shape, device=device)
     else:
-        raise NotImplementedError("stype=%s is not supported yet." % (stype,))
+        raise NotImplementedError(f"stype={stype} is not supported yet.")
     return ret
 
 
@@ -159,9 +158,15 @@ class CSRPlaceholderOp(SparsePlaceholderOp):
         """
         SparsePlaceholderOp.__init__(self, shape, nonzeros, dtype, name)
         self.stype = "csr"
-        self.data = te.placeholder((nonzeros,), dtype=dtype, name=self.name + "_data")
-        self.indices = te.placeholder((nonzeros,), dtype=itype, name=self.name + "_indices")
-        self.indptr = te.placeholder((self.shape[0] + 1,), dtype=itype, name=self.name + "_indptr")
+        self.data = te.placeholder((nonzeros,), dtype=dtype, name=f"{self.name}_data")
+        self.indices = te.placeholder(
+            (nonzeros,), dtype=itype, name=f"{self.name}_indices"
+        )
+
+        self.indptr = te.placeholder(
+            (self.shape[0] + 1,), dtype=itype, name=f"{self.name}_indptr"
+        )
+
         assert isinstance(self.data, _tensor.Tensor)
         assert isinstance(self.indices, _tensor.Tensor)
         assert isinstance(self.indptr, _tensor.Tensor)
@@ -200,5 +205,5 @@ def placeholder(shape, nonzeros=None, dtype=None, name="placeholder", stype=None
     if stype == "csr":
         ret = CSRPlaceholderOp(shape=shape, nonzeros=nonzeros, dtype=dtype, name=name)
     else:
-        raise NotImplementedError("stype=%s is not supported yet." % (stype,))
+        raise NotImplementedError(f"stype={stype} is not supported yet.")
     return ret

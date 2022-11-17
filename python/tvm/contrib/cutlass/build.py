@@ -46,19 +46,21 @@ def _get_cutlass_compile_options(sm, threads, use_fast_math=False):
     cutlass_include = os.path.join(cutlass_root, "include")
     cutlass_util_include = os.path.join(cutlass_root, "tools/util/include")
 
-    kwargs = {}
-    kwargs["cc"] = "nvcc"
-    kwargs["options"] = [
-        "-DCUTLASS_ENABLE_TENSOR_CORE_MMA=1",
-        "-gencode=arch=compute_%d,code=[sm_%d,compute_%d]" % (sm, sm, sm),
-        "-Xcompiler=-fPIC",
-        "-Xcompiler=-Wconversion",
-        "-Xcompiler=-fno-strict-aliasing",
-        "-O3",
-        "-std=c++14",
-        "-I" + cutlass_include,
-        "-I" + cutlass_util_include,
-    ]
+    kwargs = {
+        "cc": "nvcc",
+        "options": [
+            "-DCUTLASS_ENABLE_TENSOR_CORE_MMA=1",
+            "-gencode=arch=compute_%d,code=[sm_%d,compute_%d]" % (sm, sm, sm),
+            "-Xcompiler=-fPIC",
+            "-Xcompiler=-Wconversion",
+            "-Xcompiler=-fno-strict-aliasing",
+            "-O3",
+            "-std=c++14",
+            f"-I{cutlass_include}",
+            f"-I{cutlass_util_include}",
+        ],
+    }
+
     if use_fast_math:
         kwargs["options"].append("-DCUTLASS_USE_TANH_FOR_SIGMOID")
     cuda_path = find_cuda_path()
@@ -87,7 +89,11 @@ class OpAnnotator(tvm.relay.ExprVisitor):
             self.signature["ret_dtype"] = op.ret_type.dtype
             self.visit(op.body)
 
-        if str(op) in ["nn.conv2d", "nn.conv2d_transpose", "nn.conv2d_backward_weight"]:
+        if str(op) in {
+            "nn.conv2d",
+            "nn.conv2d_transpose",
+            "nn.conv2d_backward_weight",
+        }:
             self.op_attrs = call.attrs
 
         for arg in call.args:
@@ -356,7 +362,7 @@ def tune_cutlass_kernels(
             op_type = annotator.signature["op_type"]
 
             new_attrs = {"op_type": op_type}
-            new_attrs.update(annotator.signature)
+            new_attrs |= annotator.signature
             new_attrs.update(func.attrs)
             arg0_shape = new_attrs["arg0_shape"]
             arg1_shape = new_attrs["arg1_shape"]
@@ -428,7 +434,7 @@ def tune_cutlass_kernels(
                     )
                 )
             else:
-                raise ValueError("%s unsupported composite" % op_type)
+                raise ValueError(f"{op_type} unsupported composite")
 
             new_attrs = tvm.ir.make_node("DictAttrs", **new_attrs)
             new_func = relay.Function(

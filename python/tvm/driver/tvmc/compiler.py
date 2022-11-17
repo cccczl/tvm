@@ -119,10 +119,11 @@ def add_compile_parser(subparsers, _):
         "--opt-level",
         default=3,
         type=int,
-        choices=range(0, 4),
+        choices=range(4),
         metavar="[0-3]",
         help="specify which optimization level to use. Defaults to '3'.",
     )
+
     parser.add_argument(
         "--input-shapes",
         help="specify non-generic shapes for model to run, format is "
@@ -350,7 +351,7 @@ def save_dumps(module_name: str, dumps: Dict[str, str], dump_root: str = "."):
         Path in which dump files will be created
     """
 
-    for dump_format in dumps:
-        dump_name = module_name + "." + dump_format
+    for dump_format, value in dumps.items():
+        dump_name = f"{module_name}.{dump_format}"
         with open(Path(dump_root, dump_name), "w") as f:
-            f.write(dumps[dump_format])
+            f.write(value)

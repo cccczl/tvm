@@ -54,24 +54,18 @@ class GemmOperation:
         inst_shape = ""
         intermediate_type = ""
 
-        if (
-            self.tile_description.math_instruction.opcode_class == OpcodeClass.TensorOp
-            or self.tile_description.math_instruction.opcode_class == OpcodeClass.WmmaTensorOp
-        ):
+        if self.tile_description.math_instruction.opcode_class in [
+            OpcodeClass.TensorOp,
+            OpcodeClass.WmmaTensorOp,
+        ]:
             inst_shape = "%d%d%d" % tuple(self.tile_description.math_instruction.instruction_shape)
-            if (
-                self.tile_description.math_instruction.element_a != self.A.element
-                and self.tile_description.math_instruction.element_a
-                != self.tile_description.math_instruction.element_accumulator
-            ):
+            if self.tile_description.math_instruction.element_a not in [
+                self.A.element,
+                self.tile_description.math_instruction.element_accumulator,
+            ]:
                 intermediate_type = DataTypeNames[self.tile_description.math_instruction.element_a]
 
-        return "%s%s%s%s" % (
-            self.short_math_name(),
-            inst_shape,
-            intermediate_type,
-            "gemm",
-        )
+        return f"{self.short_math_name()}{inst_shape}{intermediate_type}gemm"
 
     def extended_name(self):
         """ Append data types if they differ from compute type. """
@@ -100,7 +94,7 @@ class GemmOperation:
         return extended_name
 
     def layout_name(self):
-        return "%s%s" % (ShortLayoutTypeNames[self.A.layout], ShortLayoutTypeNames[self.B.layout])
+        return f"{ShortLayoutTypeNames[self.A.layout]}{ShortLayoutTypeNames[self.B.layout]}"
 
     def procedural_name(self):
         """The full procedural name indicates architecture, extended name, tile size,

@@ -137,9 +137,9 @@ synset_name = "imagenet1000_clsid_to_human.txt"
 synset_path = download_testdata(synset_url, synset_name, module="data")
 with open(synset_path) as f:
     synset = eval(f.read())
-print("Relay top-1 id: {}, class name: {}".format(top1_tvm, synset[top1_tvm]))
+print(f"Relay top-1 id: {top1_tvm}, class name: {synset[top1_tvm]}")
 # confirm correctness with caffe2 output
 p = workspace.Predictor(resnet50.init_net, resnet50.predict_net)
 caffe2_out = p.run({input_name: data})
 top1_caffe2 = np.argmax(caffe2_out)
-print("Caffe2 top-1 id: {}, class name: {}".format(top1_caffe2, synset[top1_caffe2]))
+print(f"Caffe2 top-1 id: {top1_caffe2}, class name: {synset[top1_caffe2]}")

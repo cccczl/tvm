@@ -127,7 +127,7 @@ class KerasFrontend(Frontend):
         inputs = [np.random.uniform(size=shape, low=-1.0, high=1.0) for shape in in_shapes]
         input_shapes = {name: x.shape for (name, x) in zip(model.input_names, inputs)}
         if shape_dict is not None:
-            input_shapes.update(shape_dict)
+            input_shapes |= shape_dict
         kwargs.setdefault("layout", "NHWC")
         return relay.frontend.from_keras(model, input_shapes, **kwargs)
 
@@ -245,7 +245,7 @@ class PyTorchFrontend(Frontend):
         torch = lazy_import("torch")
 
         if shape_dict is None:
-            raise TVMCException("--input-shapes must be specified for %s" % self.name())
+            raise TVMCException(f"--input-shapes must be specified for {self.name()}")
 
         traced_model = torch.jit.load(path)
         traced_model.eval()  # Switch to inference mode

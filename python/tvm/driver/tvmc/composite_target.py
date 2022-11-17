@@ -106,4 +106,4 @@ def get_codegen_by_target(name):
     try:
         return REGISTERED_CODEGEN[name]
     except KeyError:
-        raise TVMCException("Composite target %s is not defined in TVMC." % name)
+        raise TVMCException(f"Composite target {name} is not defined in TVMC.")

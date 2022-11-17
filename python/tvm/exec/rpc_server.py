@@ -84,7 +84,7 @@ if __name__ == "__main__":
     parser.set_defaults(fork=True)
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO)
-    if not args.fork is False and not args.silent:
+    if args.fork is not False and not args.silent:
         logging.info(
             "If you are running ROCM/Metal, fork will cause "
             "compiler internal error. Try to launch with arg ```--no-fork```"

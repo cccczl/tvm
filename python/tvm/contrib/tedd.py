@@ -55,7 +55,7 @@ PALETTE_SIZE = 9
 def dom_path_to_string(dom_path, prefix=""):
     path_string = prefix
     for index in dom_path:
-        path_string = path_string + "_" + str(index)
+        path_string = f"{path_string}_{str(index)}"
     return path_string
 
 
@@ -123,18 +123,21 @@ def get_or_create_dot_id(obj, prefix="", assert_on_missing=False):
         get_or_create_dot_id.obj_id_dict = {}
     if obj not in get_or_create_dot_id.obj_id_dict:
         if assert_on_missing:
-            assert False, "dot_id " + str(obj) + " has not been registered."
+            assert False, f"dot_id {str(obj)} has not been registered."
         else:
             get_or_create_dot_id.obj_id_dict[obj] = prefix + hex(id(obj))
     return get_or_create_dot_id.obj_id_dict[obj]
 
 
 def get_port_id(is_input, index):
-    return "I_" + str(index) if is_input else "O_" + str(index)
+    return f"I_{str(index)}" if is_input else f"O_{str(index)}"
 
 
 def get_itervar_type_info(iter_type):
-    assert iter_type < len(ITERVAR_TYPE_STRING_MAP), "Unknown IterVar type: " + str(iter_type)
+    assert iter_type < len(
+        ITERVAR_TYPE_STRING_MAP
+    ), f"Unknown IterVar type: {str(iter_type)}"
+
     return ITERVAR_TYPE_STRING_MAP[iter_type]
 
 
@@ -222,20 +225,17 @@ def dump_graph(dot_string, show_svg=True, dot_file_path="", output_dot_string=Fa
     """Output dot_string in various formats."""
     if dot_file_path:
         try:
-            dot_file = open(dot_file_path, "w+")
-            dot_file.write(dot_string)
-            dot_file.close()
+            with open(dot_file_path, "w+") as dot_file:
+                dot_file.write(dot_string)
         except IOError:
-            print("Cannot open file: " + dot_file_path)
+            print(f"Cannot open file: {dot_file_path}")
     if show_svg:
         from IPython.display import display
         from IPython.display import SVG
 
         src = Source(dot_string)
         display(SVG(src.pipe(format="svg")))
-    if output_dot_string:
-        return dot_string
-    return None
+    return dot_string if output_dot_string else None
 
 
 def dump_json(sch, need_range):
@@ -266,7 +266,12 @@ def dump_json(sch, need_range):
             if attr.tensor_intrin is not None:
                 tensor_intrin = str(attr.tensor_intrin.body)
                 # remove the final \n
-                tensor_intrin = tensor_intrin[0:-1] if tensor_intrin[-1] == "\n" else tensor_intrin
+                tensor_intrin = (
+                    tensor_intrin[:-1]
+                    if tensor_intrin[-1] == "\n"
+                    else tensor_intrin
+                )
+
             else:
                 tensor_intrin = None
         else:
@@ -626,25 +631,25 @@ def viz_itervar_relationship_graph(sch, show_svg=False, dot_file_path="", output
             parent = dom_path_to_string(node["parent"], "IterVar")
             outer = dom_path_to_string(node["outer"], "IterVar")
             inner = dom_path_to_string(node["inner"], "IterVar")
-            g.edge(parent + ":itervar", node_id + ":Input")
-            g.edge(node_id + ":Outer", outer + ":itervar")
-            g.edge(node_id + ":Inner", inner + ":itervar")
+            g.edge(f"{parent}:itervar", f"{node_id}:Input")
+            g.edge(f"{node_id}:Outer", f"{outer}:itervar")
+            g.edge(f"{node_id}:Inner", f"{inner}:itervar")
         elif node_type == "Fuse_Relation":
             node_type = "Fuse"
             itervar_relation_node_dot(g, node_id, node_type, ["Outer", "Inner"], ["Fused"])
             fused = dom_path_to_string(node["fused"], "IterVar")
             outer = dom_path_to_string(node["outer"], "IterVar")
             inner = dom_path_to_string(node["inner"], "IterVar")
-            g.edge(outer + ":itervar", node_id + ":Outer")
-            g.edge(inner + ":itervar", node_id + ":Inner")
-            g.edge(node_id + ":Fused", fused + ":itervar")
+            g.edge(f"{outer}:itervar", f"{node_id}:Outer")
+            g.edge(f"{inner}:itervar", f"{node_id}:Inner")
+            g.edge(f"{node_id}:Fused", f"{fused}:itervar")
         elif node_type == "Singleton_Relation":
             node_type = "Singleton"
             itervar_relation_node_dot(g, node_id, node_type, [], ["Iter"])
             itervar = dom_path_to_string(node["inner"], "IterVar")
-            g.edge(node_id + ":Iter", itervar + ":itervar")
+            g.edge(f"{node_id}:Iter", f"{itervar}:itervar")
         else:
-            assert False, "Unknown IterVarRelationNode: " + node_type
+            assert False, f"Unknown IterVarRelationNode: {node_type}"
 
     def stage_node_dot(g, stage):
         """Create a stage node."""

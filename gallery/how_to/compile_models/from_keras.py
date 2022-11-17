@@ -34,6 +34,7 @@ A quick solution is to install via pip
 or please refer to official site
 https://keras.io/#installation
 """
+
 import tvm
 from tvm import te
 import tvm.relay as relay
@@ -129,8 +130,8 @@ synset_name = "imagenet1000_clsid_to_human.txt"
 synset_path = download_testdata(synset_url, synset_name, module="data")
 with open(synset_path) as f:
     synset = eval(f.read())
-print("Relay top-1 id: {}, class name: {}".format(top1_tvm, synset[top1_tvm]))
+print(f"Relay top-1 id: {top1_tvm}, class name: {synset[top1_tvm]}")
 # confirm correctness with keras output
 keras_out = keras_resnet50.predict(data.transpose([0, 2, 3, 1]))
 top1_keras = np.argmax(keras_out)
-print("Keras top-1 id: {}, class name: {}".format(top1_keras, synset[top1_keras]))
+print(f"Keras top-1 id: {top1_keras}, class name: {synset[top1_keras]}")

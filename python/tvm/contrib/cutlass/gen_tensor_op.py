@@ -126,7 +126,7 @@ def generate_sm75_tensor_op_1688(
         ]
 
     alignment_constraints = [align for align in alignment_constraints if check_align(align)]
-    assert len(alignment_constraints) > 0
+    assert alignment_constraints
 
     if not profile_all_alignments:
         alignment_constraints = [alignment_constraints[0]]
@@ -249,7 +249,7 @@ def generate_sm80_tensor_op_16816(
 
     alignment_constraints = [align for align in alignment_constraints if check_align(align)]
 
-    if len(alignment_constraints) > 0 and not profile_all_alignments:
+    if alignment_constraints and not profile_all_alignments:
         alignment_constraints = [alignment_constraints[0]]
 
     if arg0_dtype != "float32" and arg1_dtype != "float32":
@@ -267,7 +267,7 @@ def generate_sm80_tensor_op_16816(
         # TF32 (float32 + float32 case) is only supported on sm80
         sm75_kernels = []
 
-    if len(alignment_constraints) > 0:
+    if alignment_constraints:
         sm80_kernels = generate_tensor_op_common(
             math_instructions, alignment_constraints, get_tile_descriptions, op_creator
         )
@@ -358,8 +358,7 @@ class ProfilerEngine:
             # Bail out if compilation fails for a whatever reason (e.g. static assert failure)
             return float("inf")
         cmd = [opath]
-        for arg in args:
-            cmd.append(str(arg))
+        cmd.extend(str(arg) for arg in args)
         try:
             sp = subprocess.run(cmd, capture_output=True, check=True)
             rt = float(sp.stdout)

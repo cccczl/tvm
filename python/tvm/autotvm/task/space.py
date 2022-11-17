@@ -131,21 +131,18 @@ class VirtualAxis(TransformSpace):
             self.length = var
         elif isinstance(var, schedule.IterVar):
             self.name = var.var.name
-            if var.dom is None:
-                self.length = -1
-            else:
-                self.length = get_const_int(var.dom.extent)
+            self.length = -1 if var.dom is None else get_const_int(var.dom.extent)
         elif isinstance(var, VirtualAxis):
             self.length = var.length
         else:
-            raise RuntimeError("Invalid type of axis: " + str(type(var)))
+            raise RuntimeError(f"Invalid type of axis: {str(type(var))}")
 
     @staticmethod
     def get_num_output(var, name=None):
         return 1
 
     def __repr__(self):
-        return "vaxis(%s)" % self.name
+        return f"vaxis({self.name})"
 
 
 def get_factors(n):
@@ -162,16 +159,18 @@ def get_factors(n):
         List of all factors
     """
     step = 2 if n % 2 else 1
-    ret = list(
+    return sorted(
         set(
             functools.reduce(
                 list.__add__,
-                ([i, n // i] for i in range(1, int(math.sqrt(n)) + 1, step) if n % i == 0),
+                (
+                    [i, n // i]
+                    for i in range(1, int(math.sqrt(n)) + 1, step)
+                    if n % i == 0
+                ),
             )
         )
     )
-    ret.sort()
-    return ret
 
 
 def get_pow2s(n):
@@ -223,7 +222,7 @@ class SplitSpace(TransformSpace):
                 # Include less, equal, and round-up power-of-two numbers. May generate tails.
                 factors = [x for x in get_pow2s(self.product) if x <= max_factor]
             else:
-                raise RuntimeError("Invalid policy: %s" % policy)
+                raise RuntimeError(f"Invalid policy: {policy}")
 
             # Enforce the product of all split factors equals to the axis length
             no_tail = kwargs.get("no_tail", policy == "factors")
@@ -353,7 +352,7 @@ class ReorderSpace(TransformSpace):
                 for r in reduce_merged:
                     self.entities.append(ReorderEntity(o + r + inner_merged))
         else:
-            raise RuntimeError("Invalid policy: " + policy)
+            raise RuntimeError(f"Invalid policy: {policy}")
 
     @staticmethod
     def get_num_output(axes, policy, **kwargs):
@@ -520,7 +519,7 @@ class AnnotateSpace(TransformSpace):
 
             for ann in anns:
                 if ann not in ["none", "unroll", "vec"]:
-                    raise RuntimeError("Invalid policy: " + policy)
+                    raise RuntimeError(f"Invalid policy: {policy}")
 
             self.num_axis = len(axes)
             self.anns = [anns] * self.num_axis
@@ -621,7 +620,7 @@ class AnnotateEntity(object):
                     assert i < len(axes) - 1
                     axes[i + 1] = sch[op].fuse(axes[i], axes[i + 1])
                 else:
-                    raise RuntimeError("Invalid annotation " + ann)
+                    raise RuntimeError(f"Invalid annotation {ann}")
         return axes
 
     def __repr__(self):
@@ -852,14 +851,13 @@ class ConfigSpace(object):
             index in the space
         """
         if index < 0 or index >= len(self):
-            raise IndexError("Index out of range: size {}, got index {}".format(len(self), index))
+            raise IndexError(f"Index out of range: size {len(self)}, got index {index}")
         entities = OrderedDict()
         t = index
         for name, space in self.space_map.items():
             entities[name] = space[t % len(space)]
             t //= len(space)
-        ret = ConfigEntity(index, self.code_hash, entities, self._constraints)
-        return ret
+        return ConfigEntity(index, self.code_hash, entities, self._constraints)
 
     def __iter__(self):
         return self._entity_map.__iter__()
@@ -879,7 +877,7 @@ class ConfigSpace(object):
         res = "ConfigSpace (len=%d, space_map=\n" % len(self)
         for i, (name, space) in enumerate(self.space_map.items()):
             res += "  %2d %s: %s\n" % (i, name, space)
-        return res + ")"
+        return f"{res})"
 
 
 _ann_to_number = {
@@ -963,9 +961,7 @@ class ConfigEntity(ConfigSpace):
         json_dict: dict
             a json serializable dictionary
         """
-        ret = {}
-        ret["index"] = int(self.index)
-        ret["code_hash"] = self.code_hash
+        ret = {"index": int(self.index), "code_hash": self.code_hash}
         entity_map = []
         for k, v in self._entity_map.items():
             if isinstance(v, SplitEntity):
@@ -977,7 +973,7 @@ class ConfigEntity(ConfigSpace):
             elif isinstance(v, OtherOptionEntity):
                 entity_map.append((k, "ot", v.val))
             else:
-                raise RuntimeError("Invalid entity instance: " + v)
+                raise RuntimeError(f"Invalid entity instance: {v}")
         ret["entity"] = entity_map
         return ret
 
@@ -1013,7 +1009,7 @@ class ConfigEntity(ConfigSpace):
             elif knob_type == "ot":
                 entity = OtherOptionEntity(knob_args)
             else:
-                raise RuntimeError("Invalid config knob type: " + knob_type)
+                raise RuntimeError(f"Invalid config knob type: {knob_type}")
             entity_map[str(key)] = entity
 
         return ConfigEntity(index, code_hash, entity_map, constraints)
@@ -1060,17 +1056,18 @@ class FallbackConfigEntity(ConfigSpace):
         for i in reversed(range(space.num_output)):
             factors = get_factors(now)
 
-            find = len(factors) - 1
-            for j, f in enumerate(factors):
-                if f > constraints[i]:
-                    find = j - 1
-                    break
+            find = next(
+                (j - 1 for j, f in enumerate(factors) if f > constraints[i]),
+                len(factors) - 1,
+            )
 
             if find >= 0:
                 entity.size[i] = factors[find]
                 now //= factors[find]
             else:
-                raise RuntimeError("Cannot find feasible fallback split entity for node: " + name)
+                raise RuntimeError(
+                    f"Cannot find feasible fallback split entity for node: {name}"
+                )
 
     def fallback_with_reference_log(self, ref_log):
         """A data driven fallback mechanism.
@@ -1089,9 +1086,10 @@ class FallbackConfigEntity(ConfigSpace):
         knob_names = [x for x in self.space_map.keys() if isinstance(self.space_map[x], SplitSpace)]
 
         # find best match config in reference data by matching tiling factors
-        factor_list = []
-        for knob_name in knob_names:
-            factor_list.append(get_factors(self.space_map[knob_name].product))
+        factor_list = [
+            get_factors(self.space_map[knob_name].product)
+            for knob_name in knob_names
+        ]
 
         best_match_cfg = None
         best_match_score = 0
@@ -1133,4 +1131,4 @@ class FallbackConfigEntity(ConfigSpace):
         self._entity_map[name] = entity
 
     def __repr__(self):
-        return "%s,%s" % (str(self._entity_map)[12:-1], self.code_hash)
+        return f"{str(self._entity_map)[12:-1]},{self.code_hash}"

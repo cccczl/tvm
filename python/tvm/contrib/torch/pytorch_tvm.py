@@ -40,7 +40,7 @@ def tune_tasks(
 ):
     """Tune tasks and generate tuning log to file"""
     # create tmp log file
-    tmp_log_file = log_filename + ".tmp"
+    tmp_log_file = f"{log_filename}.tmp"
     if os.path.exists(tmp_log_file):
         os.remove(tmp_log_file)
 
@@ -57,11 +57,10 @@ def tune_tasks(
         elif tuner == "gridsearch":
             tuner_obj = GridSearchTuner(tsk)
         else:
-            raise ValueError("Invalid tuner: " + tuner)
+            raise ValueError(f"Invalid tuner: {tuner}")
 
-        if use_transfer_learning:
-            if os.path.isfile(tmp_log_file):
-                tuner_obj.load_history(autotvm.record.load_from_file(tmp_log_file))
+        if use_transfer_learning and os.path.isfile(tmp_log_file):
+            tuner_obj.load_history(autotvm.record.load_from_file(tmp_log_file))
 
         # do tuning
         tsk_trial = min(n_trial, len(tsk.config_space))
@@ -86,17 +85,18 @@ def tune_tasks(
 
 def get_tuning_opt(log_file="tuning.log", n_trial=200):
     """Returns tuning options"""
-    tuning_opt = {
+    return {
         "log_filename": log_file,
         "tuner": "random",
         "n_trial": n_trial,
         "early_stopping": 60,
         "measure_option": autotvm.measure_option(
             builder=autotvm.LocalBuilder(timeout=10),
-            runner=autotvm.LocalRunner(number=20, repeat=3, timeout=4, min_repeat_ms=150),
+            runner=autotvm.LocalRunner(
+                number=20, repeat=3, timeout=4, min_repeat_ms=150
+            ),
         ),
     }
-    return tuning_opt
 
 
 TVM_ASSETS = ["mod.so", "graph.json", "params"]
@@ -151,10 +151,14 @@ class PyTorchTVMModule:
                     self.mod, target=self.target, params=self.params
                 )
 
-        if not debug_runtime:
-            self.tvm_module = graph_executor.create(self.tvm_graph, self.tvm_lib, device=self.dev)
-        else:
-            self.tvm_module = debug_executor.create(self.tvm_graph, self.tvm_lib, device=self.dev)
+        self.tvm_module = (
+            debug_executor.create(self.tvm_graph, self.tvm_lib, device=self.dev)
+            if debug_runtime
+            else graph_executor.create(
+                self.tvm_graph, self.tvm_lib, device=self.dev
+            )
+        )
+
         self.tvm_module.set_input(**self.tvm_params)
         return self.tvm_module
 
@@ -245,5 +249,6 @@ def compile(script_module, option):
 
     print("Building...")
     mod.build_tvm(export_dir)
-    pytorch_mod = mod.build_pytorch_module(num_inputs=len(input_infos), num_outputs=num_outputs)
-    return pytorch_mod
+    return mod.build_pytorch_module(
+        num_inputs=len(input_infos), num_outputs=num_outputs
+    )

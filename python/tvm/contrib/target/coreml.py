@@ -165,7 +165,7 @@ class CodegenCoreML(ExprVisitor):
         self.builder = NeuralNetworkBuilder(inputs, outputs, disable_rank5_shape_mapping=True)
 
     def visit_constant(self, const):
-        output = "buf_" + str(self.buf_idx_)
+        output = f"buf_{str(self.buf_idx_)}"
         self.builder.add_load_constant_nd(
             name=output,
             output_name=output,
@@ -186,13 +186,12 @@ class CodegenCoreML(ExprVisitor):
         inputs = []
         for arg in call.args:
             super().visit(arg)
-            for out in self.out_map[arg]:
-                inputs.append(out)
-        outputs = ["buf_" + str(self.buf_idx_)]
+            inputs.extend(iter(self.out_map[arg]))
+        outputs = [f"buf_{str(self.buf_idx_)}"]
         op_name = call.op.name
-        layer_name = op_name + "_" + str(self.buf_idx_)
+        layer_name = f"{op_name}_{str(self.buf_idx_)}"
 
-        assert op_name in _convert_map, "{} is not supported".format(op_name)
+        assert op_name in _convert_map, f"{op_name} is not supported"
         _convert_map[op_name](self.builder, layer_name, inputs, outputs, call.args, call.attrs)
 
         self.buf_idx_ = self.buf_idx_ + 1
@@ -239,7 +238,7 @@ def coreml_compiler(func):
     name = str(func.attrs.global_symbol)
     builder = CodegenCoreML(name, func)
     builder.visit(func.body)
-    mlmodelc_path = "{}/{}.mlmodelc".format(model_dir, name)
+    mlmodelc_path = f"{model_dir}/{name}.mlmodelc"
     if os.path.exists(mlmodelc_path):
         shutil.rmtree(mlmodelc_path)
     builder.compile(model_dir)

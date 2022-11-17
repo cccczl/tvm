@@ -56,5 +56,4 @@ def get_top_results(result: TVMCResult, max_results: int):
     sorted_labels = output.argsort()[0][-max_results:][::-1]
     output.sort()
     sorted_values = output[0][-max_results:][::-1]
-    top_results = np.array([sorted_labels, sorted_values])
-    return top_results
+    return np.array([sorted_labels, sorted_values])

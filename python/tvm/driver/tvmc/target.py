@@ -80,8 +80,7 @@ def reconstruct_target_args(args):
     """Reconstructs the target options from the arguments"""
     reconstructed = {}
     for target_kind in _valid_target_kinds():
-        kind_options = _reconstruct_target_kind_args(args, target_kind)
-        if kind_options:
+        if kind_options := _reconstruct_target_kind_args(args, target_kind):
             reconstructed[target_kind] = kind_options
     return reconstructed
 
@@ -112,7 +111,11 @@ def validate_targets(parse_targets, additional_target_options=None):
 
     if additional_target_options is not None:
         for target_name in additional_target_options:
-            if not any([target for target in parse_targets if target["name"] == target_name]):
+            if not any(
+                target
+                for target in parse_targets
+                if target["name"] == target_name
+            ):
                 first_option = list(additional_target_options[target_name].keys())[0]
                 raise TVMCException(
                     f"Passed --target-{target_name}-{first_option}"
@@ -218,9 +221,8 @@ def parse_target(target):
     tvm_target_kinds = tvm.target.Target.list_kinds()
     parsed_tokens = tokenize_target(target)
 
-    split_codegens = []
     current_codegen = []
-    split_codegens.append(current_codegen)
+    split_codegens = [current_codegen]
     for token in parsed_tokens:
         # every time there is a comma separating
         # two codegen definitions, prepare for

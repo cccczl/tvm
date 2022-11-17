@@ -117,10 +117,7 @@ class Plan(Object):
     @property
     def tensor_configs(self):
         """The TensorConfigs specified by the Plan."""
-        tensor_configs = {}
-        for config in self._tensor_configs:
-            tensor_configs[config.tensor] = config
-        return tensor_configs
+        return {config.tensor: config for config in self._tensor_configs}
 
     @property
     def open_configs(self):

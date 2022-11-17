@@ -26,11 +26,11 @@ from tvm.relay.frontend import pytorch
 def _load_platform_specific_library(lib_name="libpt_tvmdsoop"):
     system = platform.system()
     if system == "Darwin":
-        lib_file_name = lib_name + ".dylib"
+        lib_file_name = f"{lib_name}.dylib"
     elif system == "Windows":
-        lib_file_name = lib_name + ".dll"
+        lib_file_name = f"{lib_name}.dll"
     else:
-        lib_file_name = lib_name + ".so"
+        lib_file_name = f"{lib_name}.so"
     lib_path = libinfo.find_lib_path()[0]
     lib_dir = os.path.dirname(lib_path)
     lib_file_path = os.path.join(lib_dir, lib_file_name)

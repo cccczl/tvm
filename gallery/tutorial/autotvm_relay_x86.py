@@ -42,6 +42,7 @@ The goal of this section is to give you an overview of TVM's capabilites and
 how to use them through the Python API.
 """
 
+
 ################################################################################
 # TVM is a deep learning compiler framework, with a number of different modules
 # available for working with deep learning models and operators. In this
@@ -168,7 +169,7 @@ mod, params = relay.frontend.from_onnx(onnx_model, shape_dict)
 with tvm.transform.PassContext(opt_level=3):
     lib = relay.build(mod, target=target, params=params)
 
-dev = tvm.device(str(target), 0)
+dev = tvm.device(target, 0)
 module = graph_executor.GraphModule(lib["default"](dev))
 
 ######################################################################
@@ -236,7 +237,7 @@ with open(labels_path, "r") as f:
 scores = softmax(tvm_output)
 scores = np.squeeze(scores)
 ranks = np.argsort(scores)[::-1]
-for rank in ranks[0:5]:
+for rank in ranks[:5]:
     print("class='%s' with probability=%f" % (labels[rank], scores[rank]))
 
 ################################################################################
@@ -410,7 +411,7 @@ with autotvm.apply_history_best(tuning_option["tuning_records"]):
     with tvm.transform.PassContext(opt_level=3, config={}):
         lib = relay.build(mod, target=target, params=params)
 
-dev = tvm.device(str(target), 0)
+dev = tvm.device(target, 0)
 module = graph_executor.GraphModule(lib["default"](dev))
 
 ################################################################################
@@ -425,7 +426,7 @@ tvm_output = module.get_output(0, tvm.nd.empty(output_shape)).numpy()
 scores = softmax(tvm_output)
 scores = np.squeeze(scores)
 ranks = np.argsort(scores)[::-1]
-for rank in ranks[0:5]:
+for rank in ranks[:5]:
     print("class='%s' with probability=%f" % (labels[rank], scores[rank]))
 
 ################################################################################
@@ -459,8 +460,8 @@ optimized = (
 optimized = {"mean": np.mean(optimized), "median": np.median(optimized), "std": np.std(optimized)}
 
 
-print("optimized: %s" % (optimized))
-print("unoptimized: %s" % (unoptimized))
+print(f"optimized: {optimized}")
+print(f"unoptimized: {unoptimized}")
 
 ################################################################################
 # Final Remarks

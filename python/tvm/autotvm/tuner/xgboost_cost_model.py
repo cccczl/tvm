@@ -117,7 +117,7 @@ class XGBoostCostModel(CostModel):
                 "objective": "rank:pairwise",
             }
         else:
-            raise RuntimeError("Invalid loss type: " + loss_type)
+            raise RuntimeError(f"Invalid loss type: {loss_type}")
 
         self.xgb_params["verbosity"] = 0
         if num_threads:
@@ -131,7 +131,7 @@ class XGBoostCostModel(CostModel):
         elif feature_type == "curve":
             self.feature_extract_func = _extract_curve_feature_index
         else:
-            raise RuntimeError("Invalid feature type " + feature_type)
+            raise RuntimeError(f"Invalid feature type {feature_type}")
 
         if upper_model:  # share a same feature cache with upper model
             self.feature_cache = upper_model.feature_cache
@@ -165,9 +165,7 @@ class XGBoostCostModel(CostModel):
             self.pool = None
 
     def _get_pool(self):
-        if self.upper_model:
-            return self.upper_model._get_pool()
-        return self.pool
+        return self.upper_model._get_pool() if self.upper_model else self.pool
 
     def _base_model_discount(self):
         return 1.0 / (2 ** (self._sample_size / 64.0))
@@ -224,11 +222,7 @@ class XGBoostCostModel(CostModel):
         tic = time.time()
 
         # filter data, only pick the data with a same task
-        data = []
-        for inp, res in records:
-            if inp.task.name == self.task.name:
-                data.append((inp, res))
-
+        data = [(inp, res) for inp, res in records if inp.task.name == self.task.name]
         logger.debug("XGB load %d entries from history log file", len(data))
 
         # extract feature
@@ -241,7 +235,7 @@ class XGBoostCostModel(CostModel):
         elif self.fea_type == "curve":
             feature_extract_func = _extract_curve_feature_log
         else:
-            raise RuntimeError("Invalid feature type: " + self.fea_type)
+            raise RuntimeError(f"Invalid feature type: {self.fea_type}")
         result = pool.map_with_error_catching(feature_extract_func, data)
 
         # filter out feature with different shapes
@@ -321,19 +315,20 @@ class XGBoostCostModel(CostModel):
         fea_cache = self.feature_cache.get(self.fea_type)
 
         indexes = np.array(indexes)
-        need_extract = [x for x in indexes if x not in fea_cache]
-
-        if need_extract:
+        if need_extract := [x for x in indexes if x not in fea_cache]:
             pool = self._get_pool()
             feas = pool.map_with_error_catching(self.feature_extract_func, need_extract)
             for i, fea in zip(need_extract, feas):
                 fea_cache[i] = fea.value if fea.status == StatusKind.COMPLETE else None
 
-        feature_len = None
-        for idx in indexes:
-            if fea_cache[idx] is not None:
-                feature_len = fea_cache[idx].shape[-1]
-                break
+        feature_len = next(
+            (
+                fea_cache[idx].shape[-1]
+                for idx in indexes
+                if fea_cache[idx] is not None
+            ),
+            None,
+        )
 
         ret = np.empty((len(indexes), feature_len), dtype=np.float32)
         for i, ii in enumerate(indexes):
@@ -382,10 +377,7 @@ def _extract_itervar_feature_log(arg):
         fea = feature.get_itervar_feature_flatten(sch, args, take_log=True)
         x = np.concatenate((fea, list(config.get_other_option().values())))
 
-        if res.error_no == 0:
-            y = inp.task.flop / np.mean(res.costs)
-        else:
-            y = 0.0
+        y = inp.task.flop / np.mean(res.costs) if res.error_no == 0 else 0.0
         return x, y
     except Exception:  # pylint: disable=broad-except
         return None
@@ -445,10 +437,7 @@ def _extract_curve_feature_log(arg):
         fea = feature.get_buffer_curve_sample_flatten(sch, args, sample_n=20)
         x = np.concatenate((fea, list(config.get_other_option().values())))
 
-        if res.error_no == 0:
-            y = inp.task.flop / np.mean(res.costs)
-        else:
-            y = 0.0
+        y = inp.task.flop / np.mean(res.costs) if res.error_no == 0 else 0.0
         return x, y
     except Exception:  # pylint: disable=broad-except
         return None
@@ -476,11 +465,7 @@ def custom_callback(
 
         state["maximize_score"] = maximize
         state["best_iteration"] = 0
-        if maximize:
-            state["best_score"] = float("-inf")
-        else:
-            state["best_score"] = float("inf")
-
+        state["best_score"] = float("-inf") if maximize else float("inf")
         if bst is not None:
             if bst.attr("best_score") is not None:
                 state["best_score"] = float(bst.attr("best_score"))
@@ -518,7 +503,7 @@ def custom_callback(
 
         eval_res = []
         keys = list(res_dict.keys())
-        keys.sort(key=lambda x: x if metric_shortname not in x else "a" + x)
+        keys.sort(key=lambda x: x if metric_shortname not in x else f"a{x}")
         for key in keys:
             v = res_dict[key]
             eval_res.append([key] + v)

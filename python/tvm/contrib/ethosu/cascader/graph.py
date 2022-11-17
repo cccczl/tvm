@@ -217,39 +217,40 @@ def create_cascader_graph(
     tensor_map = {}
 
     def _visit_tensor(tensor):
-        if tensor not in tensor_map:
-            is_const = False
-            # Logic to determine if the tensor is constant
-            if tensor in list(te_graph.inputs):
-                i = list(te_graph.inputs).index(tensor)
-                if i in const_dict:
-                    is_const = True
+        if tensor in tensor_map:
+            return
+        is_const = False
+        # Logic to determine if the tensor is constant
+        if tensor in list(te_graph.inputs):
+            i = list(te_graph.inputs).index(tensor)
+            if i in const_dict:
+                is_const = True
 
-            # TODO(@mbaret): Calculate the compression ratio
-            plan_tensor = Tensor(
-                tensor.shape,
-                tensor.dtype,
-                is_constant=is_const,
-            )
-            tensor_map[tensor] = plan_tensor
-            if isinstance(tensor.op, te.PlaceholderOp) or tensor in te_graph.inputs:
-                return
+        # TODO(@mbaret): Calculate the compression ratio
+        plan_tensor = Tensor(
+            tensor.shape,
+            tensor.dtype,
+            is_constant=is_const,
+        )
+        tensor_map[tensor] = plan_tensor
+        if isinstance(tensor.op, te.PlaceholderOp) or tensor in te_graph.inputs:
+            return
 
-            input_tensors = []
-            # Check whether any of the registered matchers match the current tensor
-            for matcher in REGISTERED_MATCHERS:
-                part = matcher(tensor, device_config)
-                if part:
-                    input_tensors = part.subgraph.input_tensors
-                    break
+        input_tensors = []
+        # Check whether any of the registered matchers match the current tensor
+        for matcher in REGISTERED_MATCHERS:
+            part = matcher(tensor, device_config)
+            if part:
+                input_tensors = part.subgraph.input_tensors
+                break
 
-            assert part is not None, f"The tensor {tensor} doesn't match any part."
-            part.set_output(plan_tensor)
-            plan_tensor.add_producer(part)
-            for i, input_tensor in enumerate(input_tensors):
-                _visit_tensor(input_tensor)
-                part.set_input(i, tensor_map[input_tensor])
-                tensor_map[input_tensor].add_consumer(part)
+        assert part is not None, f"The tensor {tensor} doesn't match any part."
+        part.set_output(plan_tensor)
+        plan_tensor.add_producer(part)
+        for i, input_tensor in enumerate(input_tensors):
+            _visit_tensor(input_tensor)
+            part.set_input(i, tensor_map[input_tensor])
+            tensor_map[input_tensor].add_consumer(part)
 
     for output in te_graph.outputs:
         _visit_tensor(output)

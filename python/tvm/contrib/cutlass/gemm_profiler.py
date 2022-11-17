@@ -185,7 +185,7 @@ int main(int argc, const char *arg[]) {
         )
 
     def emit(self, op_name, op_def, dtype_a, dtype_b, dtype_c, ld):
-        src = self.template.render(
+        return self.template.render(
             OperatorName=op_name,
             OperatorDef=op_def,
             DTypeA=dtype_a,
@@ -193,4 +193,3 @@ int main(int argc, const char *arg[]) {
             DTypeC=dtype_c,
             LeadingDim=ld,
         )
-        return src

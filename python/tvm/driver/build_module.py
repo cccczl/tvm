@@ -246,7 +246,7 @@ def build(
 
     if not isinstance(inputs, (dict, container.Map)):
         target = Target.current() if target is None else target
-        target = target if target else "llvm"
+        target = target or "llvm"
         target_input_mod = {target: input_mod}
     else:
         target_input_mod = inputs

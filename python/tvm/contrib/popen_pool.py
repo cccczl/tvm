@@ -114,26 +114,27 @@ class PopenWorker:
         ----
         The worker can start a new process when send is called again.
         """
-        if self._proc is not None:
-            # allow gracefully shutdown
-            try:
-                self._writer.close()
-            except IOError:
-                pass
-            try:
-                self._reader.close()
-            except IOError:
-                pass
-            # kill all child processes recurisvely
-            try:
-                kill_child_processes(self._proc.pid)
-            except TypeError:
-                pass
-            try:
-                self._proc.kill()
-            except OSError:
-                pass
-            self._proc = None
+        if self._proc is None:
+            return
+        # allow gracefully shutdown
+        try:
+            self._writer.close()
+        except IOError:
+            pass
+        try:
+            self._reader.close()
+        except IOError:
+            pass
+        # kill all child processes recurisvely
+        try:
+            kill_child_processes(self._proc.pid)
+        except TypeError:
+            pass
+        try:
+            self._proc.kill()
+        except OSError:
+            pass
+        self._proc = None
 
     def _start(self):
         """Start a new subprocess if nothing is available"""
@@ -182,9 +183,7 @@ class PopenWorker:
 
     def is_alive(self):
         """Check if the process is alive"""
-        if self._proc:
-            return self._proc.poll() is None
-        return False
+        return self._proc.poll() is None if self._proc else False
 
     def send(self, fn, args=(), kwargs=None, timeout=None):
         """Send a new function task fn(*args, **kwargs) to the subprocess.
@@ -219,7 +218,7 @@ class PopenWorker:
             if self._initializer is not None:
                 self.send(self._initializer, self._initargs)
                 self.recv()
-        kwargs = {} if not kwargs else kwargs
+        kwargs = kwargs or {}
         data = cloudpickle.dumps((fn, args, kwargs, timeout), protocol=pickle.HIGHEST_PROTOCOL)
         try:
             self._writer.write(struct.pack("<i", len(data)))

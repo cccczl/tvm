@@ -28,7 +28,7 @@ class StripeConfig(Object):
     """StripeConfig class"""
 
     def __init__(self, shape, extent, strides, order, stripes, offset):
-        strides = list([float(v) for v in strides])
+        strides = [float(v) for v in strides]
         self.__init_handle_by_constructor__(
             _ffi_api.StripeConfig, shape, extent, strides, order, stripes, offset
         )
@@ -43,7 +43,7 @@ class StripeConfig(Object):
 
     @property
     def strides(self):
-        return list([float(v.value) for v in self._strides])
+        return [float(v.value) for v in self._strides]
 
     @property
     def order(self):
@@ -77,9 +77,9 @@ class StripeConfig(Object):
 def count_stripes(stripe_config: StripeConfig, enable_sliding_window: bool = False):
     stripe_counts = dict(_ffi_api.CountStripes(stripe_config, enable_sliding_window))
     # Some code to 'de-TVM' the data types and make them pure Python
-    clean_stripe_counts = dict()
+    clean_stripe_counts = {}
     for stripe, count in stripe_counts.items():
-        clean_stripe = tuple([int(v) for v in stripe])
+        clean_stripe = tuple(int(v) for v in stripe)
         clean_count = int(count)
         clean_stripe_counts[clean_stripe] = clean_count
 

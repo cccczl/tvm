@@ -31,9 +31,10 @@ pyxir = None
 def vitis_ai_available():
     """Return whether Vitis AI tools are available"""
     pyxir_spec = importlib.util.find_spec("pyxir")
-    if not tvm.get_global_func("tvm.vitis_ai_runtime.from_xgraph", True) or pyxir_spec is None:
-        return False
-    return True
+    return bool(
+        tvm.get_global_func("tvm.vitis_ai_runtime.from_xgraph", True)
+        and pyxir_spec is not None
+    )
 
 
 class CodegenVitisAI:
@@ -91,14 +92,13 @@ class CodegenVitisAI:
                     if relay_id in output_relay_ids:
                         out_tensor_names[output_relay_ids.index(relay_id)] = layer.name
                         break
-        if any([name == "unkown_name" for name in out_tensor_names]):
+        if any(name == "unkown_name" for name in out_tensor_names):
             raise ValueError(
                 "During codegeneration the loading of subexpression"
                 " failed due to output tensor name mismatch in Relay PyXIR interface."
             )
         xgraph.meta_attrs["tvm_out_tensors"] = out_tensor_names
-        xgraph_str = pyxir.get_xgraph_str(xgraph)
-        return xgraph_str
+        return pyxir.get_xgraph_str(xgraph)
 
     def get_output_names(self):
         """Get output names from Relay expression"""
@@ -106,14 +106,13 @@ class CodegenVitisAI:
         output_relay_ids = []
         expr = func.body
         if isinstance(expr, Tuple):
-            for field in expr.fields:
-                output_relay_ids.append(hash(field))
+            output_relay_ids.extend(hash(field) for field in expr.fields)
         elif isinstance(expr, Call):
             output_relay_ids.append(hash(expr))
         elif isinstance(expr, TupleGetItem):
             output_relay_ids.append(hash(expr.tuple_value))
         else:
-            raise ValueError("Vitis-AI codegen does not support {} as output".format(type(expr)))
+            raise ValueError(f"Vitis-AI codegen does not support {type(expr)} as output")
         return output_relay_ids
 
 
@@ -173,13 +172,13 @@ def vitis_ai_compiler(ref):
             else ""
         )
     else:
-        dpu_target = cfg.dpu if cfg.dpu else None
+        dpu_target = cfg.dpu or None
         # (Optional configs) The build and work directories to be used by Vitis AI
-        vai_build_dir = cfg.build_dir if cfg.build_dir else tvm.contrib.utils.tempdir().relpath("")
+        vai_build_dir = cfg.build_dir or tvm.contrib.utils.tempdir().relpath("")
 
         # (Optional configs) Export and load PyXIR runtime module to file if provided. This is
         #   used to compile and quantize a model on the host and deploy it at the edge
-        vai_work_dir = cfg.work_dir if cfg.work_dir else tvm.contrib.utils.tempdir().relpath("")
+        vai_work_dir = cfg.work_dir or tvm.contrib.utils.tempdir().relpath("")
         export_runtime_module = cfg.export_runtime_module
         load_runtime_module = cfg.load_runtime_module
 

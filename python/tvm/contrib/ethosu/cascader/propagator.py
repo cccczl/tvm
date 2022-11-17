@@ -28,7 +28,7 @@ class Propagator(Object):
     """Propagator class"""
 
     def __init__(self, transform, offset):
-        float_transform = list([list(float(v) for v in row) for row in transform])
+        float_transform = [[float(v) for v in row] for row in transform]
         self.__init_handle_by_constructor__(_ffi_api.Propagator, float_transform, offset)
 
     def propagate(self, stripe_config):
@@ -39,10 +39,7 @@ class Propagator(Object):
         """Get the transform matrix"""
         new_matrix = []
         for row in self._transform:
-            new_row = []
-            for v in row:
-                new_row.append(v.value)
-
+            new_row = [v.value for v in row]
             new_matrix.append(new_row)
 
         return new_matrix
@@ -50,8 +47,4 @@ class Propagator(Object):
     @property
     def offset(self):
         """Get the offset matrix"""
-        new_vec = []
-        for v in self._offset:
-            new_vec.append(v.value)
-
-        return new_vec
+        return [v.value for v in self._offset]

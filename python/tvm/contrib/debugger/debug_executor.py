@@ -136,7 +136,7 @@ class GraphModuleDebug(graph_executor.GraphModule):
             Directory path where the graph and node outputs will be stored.
         """
         # save to file
-        folder_name = _DUMP_PATH_PREFIX + "device_"
+        folder_name = f"{_DUMP_PATH_PREFIX}device_"
         folder_name = folder_name + device.replace(":", "_")
         path = os.path.join(self._dump_root, folder_name)
         self._ensure_dir(path)
@@ -188,8 +188,7 @@ class GraphModuleDebug(graph_executor.GraphModule):
         output_tensors : Array<NDarray>
             Array of output tensors
         """
-        output_tensors = self._execute_next_node_get_output(node_index, output_index)
-        return output_tensors
+        return self._execute_next_node_get_output(node_index, output_index)
 
     def _run_per_layer(self):
         """Execute up to each node and each debug output will be
@@ -241,7 +240,7 @@ class GraphModuleDebug(graph_executor.GraphModule):
         elif isinstance(node, int):
             node_index = node
         else:
-            raise RuntimeError(f"Require node index or name only.")
+            raise RuntimeError("Require node index or name only.")
 
         self._debug_get_output(node_index, out)
 

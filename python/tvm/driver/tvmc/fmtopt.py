@@ -73,7 +73,7 @@ def format_option(option_text, help_text, default_text, required=True):
     # No justification is necessary for the first line since first
     # line was wrapped based on MAX_OPTNAME_CHOICES_TEXT_COL_LEN - optname_len,
     # i.e. considering optname_len, hence only append justified choices_lines[0] line.
-    choices_just_lines = [optname + "=" + choices_lines[0]]
+    choices_just_lines = [f"{optname}={choices_lines[0]}"]
 
     # Justify the remaining lines based on first optname + '='.
     for line in choices_lines[1:]:
@@ -107,10 +107,9 @@ def format_option(option_text, help_text, default_text, required=True):
     # If the option is required for one method it means there is no default for
     # it when used in that method, hence suppress default text in that case.
     if default_text and not required:
-        help_text_just_chunk += " " + default_text
+        help_text_just_chunk += f" {default_text}"
 
     if required:
         help_text_just_chunk += " (required)"
 
-    help_text_just = choices_text_just_chunk + "\n" + help_text_just_chunk
-    return help_text_just
+    return choices_text_just_chunk + "\n" + help_text_just_chunk

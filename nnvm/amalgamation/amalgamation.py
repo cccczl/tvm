@@ -60,18 +60,24 @@ sources = get_sources(sys.argv[1])
 
 
 def find_source(name, start):
-    candidates = []
-    for x in sources:
-        if x == name or x.endswith("/" + name):
-            candidates.append(x)
-    if not candidates:
+    if candidates := [
+        x for x in sources if x == name or x.endswith(f"/{name}")
+    ]:
+        return (
+            candidates[0]
+            if len(candidates) == 1
+            else next(
+                (
+                    x
+                    for x in candidates
+                    if x.split("/")[1] == start.split("/")[1]
+                ),
+                "",
+            )
+        )
+
+    else:
         return ""
-    if len(candidates) == 1:
-        return candidates[0]
-    for x in candidates:
-        if x.split("/")[1] == start.split("/")[1]:
-            return x
-    return ""
 
 
 re1 = re.compile("<([./a-zA-Z0-9_-]*)>")
@@ -102,15 +108,13 @@ def expand(x, pending):
         if not m:
             m = re2.search(line)
         if not m:
-            print(line + " not found")
+            print(f"{line} not found")
             continue
         h = m.groups()[0].strip("./")
-        source = find_source(h, x)
-        if not source:
-            if h not in blacklist and h not in sysheaders and "mkl" not in h and "nnpack" not in h:
-                sysheaders.append(h)
-        else:
+        if source := find_source(h, x):
             expand(source, pending + [x])
+        elif h not in blacklist and h not in sysheaders and "mkl" not in h and "nnpack" not in h:
+            sysheaders.append(h)
     print("//===== EXPANDED: %s =====\n" % x, file=out)
     history.add(x)
 
@@ -121,7 +125,7 @@ f = open(sys.argv[3], "wb")
 
 
 for k in sorted(sysheaders):
-    print("#include <%s>" % k, file=f)
+    print(f"#include <{k}>", file=f)
 
 print("", file=f)
 print(out.getvalue(), file=f)

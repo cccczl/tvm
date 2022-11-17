@@ -213,7 +213,7 @@ def add_micro_parser(subparsers, main_parser):
         template_dir=template_dir,
     )
 
-    required = any([opt["required"] for opt in options_by_method[method]])
+    required = any(opt["required"] for opt in options_by_method[method])
     nargs = "+" if required else "*"
 
     help_text_by_option = [opt["help_text"] for opt in options_by_method[method]]
@@ -274,9 +274,9 @@ def build_handler(args):
     if not os.path.exists(project_dir):
         raise TVMCException(f"{project_dir} doesn't exist.")
 
-    if os.path.exists(project_dir + "/build"):
+    if os.path.exists(f"{project_dir}/build"):
         if args.force:
-            shutil.rmtree(project_dir + "/build")
+            shutil.rmtree(f"{project_dir}/build")
         else:
             raise TVMCException(
                 f"There is already a build in {project_dir}. "
@@ -298,7 +298,7 @@ def flash_handler(args):
 
     project_dir = get_project_dir(args.project_dir)
 
-    if not os.path.exists(project_dir + "/build"):
+    if not os.path.exists(f"{project_dir}/build"):
         raise TVMCException(f"Could not find a build in {project_dir}")
 
     options = get_and_check_options(args.project_option, args.valid_options)

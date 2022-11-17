@@ -50,15 +50,13 @@ def __get_min_os_version(sdk):
         return None
     if sdk == "iphoneos":
         return "13.0"
-    raise RuntimeError("Unsupported sdk: %s" % sdk)
+    raise RuntimeError(f"Unsupported sdk: {sdk}")
 
 
 def __get_min_os_version_cmd(sdk, min_os_version):
     if min_os_version is None:
         min_os_version = __get_min_os_version(sdk)
-    if min_os_version is not None:
-        return "-mios-version-min=" + min_os_version
-    return ""
+    return "" if min_os_version is None else f"-mios-version-min={min_os_version}"
 
 
 def create_dylib(output, objects, arch, sdk="macosx", min_os_version=None):
@@ -89,11 +87,7 @@ def create_dylib(output, objects, arch, sdk="macosx", min_os_version=None):
     cmd += ["-isysroot", sdk_path]
     cmd += [__get_min_os_version_cmd(sdk, min_os_version)]
     cmd += ["-o", output]
-    if isinstance(objects, str):
-        cmd += [objects]
-    else:
-        cmd += objects
-
+    cmd += [objects] if isinstance(objects, str) else objects
     proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     (out, _) = proc.communicate()
 
@@ -133,7 +127,7 @@ def compile_metal(code, path_target=None, sdk="macosx", min_os_version=None):
 
     with open(temp_code, "w") as out_file:
         out_file.write(code)
-    file_target = path_target if path_target else temp_target
+    file_target = path_target or temp_target
 
     # See:
     # - https://developer.apple.com/documentation/metal/gpu_functions_libraries/building_a_library_with_metal_s_command-line_tools#overview # pylint: disable=line-too-long
@@ -146,7 +140,7 @@ def compile_metal(code, path_target=None, sdk="macosx", min_os_version=None):
     elif sdk in ("iphoneos", "iphonesimulator"):
         language_version = "-std=ios-metal2.3"
     else:
-        raise RuntimeError("Unsupported sdk: %s" % sdk)
+        raise RuntimeError(f"Unsupported sdk: {sdk}")
     cmd1 = ["xcrun", "-sdk", sdk, "metal", language_version, min_target, "-O3"]
     cmd1 += ["-c", temp_code, "-o", temp_ir]
     cmd2 = ["xcrun", "-sdk", sdk, "metallib"]
@@ -158,20 +152,18 @@ def compile_metal(code, path_target=None, sdk="macosx", min_os_version=None):
         stderr=subprocess.STDOUT,
     )
     (out, _) = proc.communicate()
-    if proc.returncode != 0:
-        sys.stderr.write("Compilation error:\n")
-        sys.stderr.write(py_str(out))
-        sys.stderr.flush()
-        libbin = None
-    else:
-        libbin = bytearray(open(file_target, "rb").read())
-    return libbin
+    if proc.returncode == 0:
+        return bytearray(open(file_target, "rb").read())
+    sys.stderr.write("Compilation error:\n")
+    sys.stderr.write(py_str(out))
+    sys.stderr.flush()
+    return None
 
 
 def compile_coreml(model, model_name="main", out_dir="."):
     """Compile coreml model and return the compiled model path."""
-    mlmodel_path = os.path.join(out_dir, model_name + ".mlmodel")
-    mlmodelc_path = os.path.join(out_dir, model_name + ".mlmodelc")
+    mlmodel_path = os.path.join(out_dir, f"{model_name}.mlmodel")
+    mlmodelc_path = os.path.join(out_dir, f"{model_name}.mlmodelc")
     metadata = {"inputs": list(model.input_description), "outputs": list(model.output_description)}
     # Use the description field to send info to CoreML runtime
     model.short_description = json.dumps(metadata)
@@ -179,6 +171,6 @@ def compile_coreml(model, model_name="main", out_dir="."):
 
     res = xcrun(["coremlcompiler", "compile", mlmodel_path, out_dir])
     if not os.path.isdir(mlmodelc_path):
-        raise RuntimeError("Compile failed: %s" % res)
+        raise RuntimeError(f"Compile failed: {res}")
 
     return mlmodelc_path
